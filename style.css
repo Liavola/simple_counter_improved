@@ -94,7 +94,6 @@ body {
 
 .primary-btn:hover {
     background: linear-gradient(135deg, #2980b9, #1f618d);
-    transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
 
@@ -105,7 +104,6 @@ body {
 
 .secondary-btn:hover {
     background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
-    transform: translateY(-2px);
 }
 
 /* Main Content */
@@ -222,7 +220,6 @@ main {
 
 .counter-btn.plus:hover {
     background: linear-gradient(135deg, #219a52, #1e8449);
-    transform: scale(1.1);
 }
 
 .count-display {
