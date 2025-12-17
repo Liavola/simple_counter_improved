@@ -36,6 +36,14 @@ class CounterApp {
     document
       .getElementById("resetStylesBtn")
       .addEventListener("click", this.resetStyles.bind(this));
+       // Settings panel toggle
+    document.getElementById("toggleSettingsBtn").addEventListener("click", () => {
+        this.toggleSettings();
+    });
+    
+    document.getElementById("closeSettingsBtn").addEventListener("click", () => {
+        this.closeSettings();
+    });
   }
 
   addCounter() {
@@ -159,6 +167,17 @@ class CounterApp {
     document.body.style.fontSize = fontSize + "px";
     this.saveSettings();
   }
+
+  
+toggleSettings() {
+    const panel = document.getElementById("settingsPanel");
+    panel.classList.toggle("open");
+}
+
+closeSettings() {
+    const panel = document.getElementById("settingsPanel");
+    panel.classList.remove("open");
+}
 
   resetStyles() {
     document.body.style.backgroundColor = "";

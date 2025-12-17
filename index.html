@@ -11,52 +11,15 @@
 </head>
 <body>
     <div class="app-wrapper">
-        <!-- Settings Panel -->
-        <header class="controls">
-            <h2>Customization</h2>
-            
-            <div class="input-group">
-                <label>Background Color:</label>
-                <input type="text" id="bgColorInput" placeholder="#ffffff" maxlength="7">
-            </div>
-
-            <div class="input-group">
-                <label>Text Color:</label>
-                <input type="text" id="textColorInput" placeholder="#000000" maxlength="7">
-            </div>
-
-            <div class="input-group">
-                <label>Background Image URL:</label>
-                <input type="text" id="bgImageInput" placeholder="Enter image URL">
-            </div>
-
-            <div class="input-group">
-                <label>Font Family:</label>
-                <select id="fontSelect">
-                    <option value="'Open Sans', sans-serif">Open Sans (Default)</option>
-                    <option value="'Playfair Display', serif">Playfair Display</option>
-                    <option value="'Quicksand', sans-serif">Quicksand</option>
-                    <option value="'Roboto', sans-serif">Roboto</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label>Font Size:</label>
-                <input type="range" id="fontSizeSlider" min="12" max="72" value="24">
-                <span id="fontSizeDisplay">24px</span>
-            </div>
-
-            <div class="input-group">
-                <button id="resetStylesBtn" class="secondary-btn">Reset Styles</button>
-            </div>
-        </header>
-
         <!-- Main Counter Area -->
         <main>
             <div class="sticky-header">
                 <button id="addCounterBtn" class="primary-btn">Add New Counter</button>
-                <div class="total-display">
-                    <span>Total: <span id="totalCount">0</span></span>
+                <div class="header-controls">
+                    <div class="total-display">
+                        <span>Total: <span id="totalCount">0</span></span>
+                    </div>
+                    <button id="toggleSettingsBtn" class="settings-btn">⚙️ Settings</button>
                 </div>
             </div>
 
@@ -64,6 +27,51 @@
                 <!-- Counters will be dynamically added here -->
             </div>
         </main>
+
+        <!-- Settings Panel (Initially Hidden) -->
+        <aside class="settings-panel" id="settingsPanel">
+            <div class="settings-content">
+                <div class="settings-header">
+                    <h2>Customization</h2>
+                    <button id="closeSettingsBtn" class="close-btn">×</button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Background Color:</label>
+                    <input type="text" id="bgColorInput" placeholder="#ffffff" maxlength="7">
+                </div>
+
+                <div class="input-group">
+                    <label>Text Color:</label>
+                    <input type="text" id="textColorInput" placeholder="#000000" maxlength="7">
+                </div>
+
+                <div class="input-group">
+                    <label>Background Image URL:</label>
+                    <input type="text" id="bgImageInput" placeholder="Enter image URL">
+                </div>
+
+                <div class="input-group">
+                    <label>Font Family:</label>
+                    <select id="fontSelect">
+                        <option value="'Open Sans', sans-serif">Open Sans (Default)</option>
+                        <option value="'Playfair Display', serif">Playfair Display</option>
+                        <option value="'Quicksand', sans-serif">Quicksand</option>
+                        <option value="'Roboto', sans-serif">Roboto</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Font Size:</label>
+                    <input type="range" id="fontSizeSlider" min="12" max="72" value="24">
+                    <span id="fontSizeDisplay">24px</span>
+                </div>
+
+                <div class="input-group">
+                    <button id="resetStylesBtn" class="secondary-btn">Reset Styles</button>
+                </div>
+            </div>
+        </aside>
     </div>
     <script src="index.js"></script>
 </body>
