@@ -2,6 +2,7 @@ class CounterApp {
   constructor() {
     this.counters = [];
     this.nextId = 1;
+    this.selectedBackground = "";
     this.init();
   }
 
@@ -9,45 +10,75 @@ class CounterApp {
     this.bindEvents();
     this.loadCounters();
     this.loadSettings();
-
-    // Add initial counter if none exist
-    if (this.counters.length === 0) {
-      this.addCounter();
-    }
+    if (this.counters.length === 0) this.addCounter();
   }
 
   bindEvents() {
-    document.getElementById("addCounterBtn").addEventListener("click", () => {
-      this.addCounter();
+    const bind = (id, event, handler) =>
+      document.getElementById(id).addEventListener(event, handler);
+
+    bind("addCounterBtn", "click", () => this.addCounter());
+    bind("resetCountersBtn", "click", () => this.resetAllCounters());
+    bind("bgColorInput", "input", this.updateBackgroundColor.bind(this));
+    bind("fontSelect", "change", this.updateFontFamily.bind(this));
+    bind("resetStylesBtn", "click", this.resetStyles.bind(this));
+    bind("toggleSettingsBtn", "click", () => this.toggleSettings());
+    bind("closeSettingsBtn", "click", () => this.closeSettings());
+
+    document.querySelectorAll(".image-option").forEach((option) => {
+      option.addEventListener("click", () =>
+        this.selectBackgroundImage(option)
+      );
     });
+  }
 
+  selectBackgroundImage(option) {
     document
-      .getElementById("bgColorInput")
-      .addEventListener("input", this.updateBackgroundColor.bind(this));
-    document
-      .getElementById("textColorInput")
-      .addEventListener("input", this.updateTextColor.bind(this));
-    document
-      .getElementById("bgImageInput")
-      .addEventListener("input", this.updateBackgroundImage.bind(this));
-    document
-      .getElementById("fontSelect")
-      .addEventListener("change", this.updateFontFamily.bind(this));
-    document
-      .getElementById("resetStylesBtn")
-      .addEventListener("click", this.resetStyles.bind(this));
+      .querySelectorAll(".image-option")
+      .forEach((opt) => opt.classList.remove("selected"));
+    option.classList.add("selected");
 
-    document
-      .getElementById("toggleSettingsBtn")
-      .addEventListener("click", () => {
-        this.toggleSettings();
+    const imageUrl = option.dataset.image;
+    this.selectedBackground = imageUrl;
+
+    if (imageUrl) {
+      Object.assign(document.body.style, {
+        backgroundImage: `url(${imageUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       });
+    } else {
+      document.body.style.backgroundImage = "";
+    }
+    this.saveSettings();
+  }
 
-    document
-      .getElementById("closeSettingsBtn")
-      .addEventListener("click", () => {
-        this.closeSettings();
+  resetAllCounters() {
+    if (
+      confirm(
+        "Are you sure you want to reset all counters to 0? This cannot be undone."
+      )
+    ) {
+      this.counters.forEach((counter) => {
+        counter.count = 0;
+        this.updateCounterDisplay(counter.id, 0);
       });
+      this.updateTotal();
+      this.saveCounters();
+    }
+  }
+
+  resetCounter(id) {
+    if (confirm("Reset this counter to 0?")) {
+      const counter = this.counters.find((c) => c.id === id);
+      if (counter) {
+        counter.count = 0;
+        this.updateCounterDisplay(id, 0);
+        this.updateTotal();
+        this.saveCounters();
+      }
+    }
   }
 
   addCounter() {
@@ -56,7 +87,6 @@ class CounterApp {
       count: 0,
       name: `Counter ${this.counters.length + 1}`,
     };
-
     this.counters.push(counter);
     this.renderCounter(counter);
     this.updateTotal();
@@ -72,7 +102,10 @@ class CounterApp {
     counterDiv.innerHTML = `
       <div class="counter-header">
         <div class="counter-title" onclick="app.editCounterName(${counter.id})">${counter.name}</div>
-        <button class="delete-counter" onclick="app.deleteCounter(${counter.id})">×</button>
+        <div class="counter-actions">
+          <button class="reset-counter" onclick="app.resetCounter(${counter.id})" title="Reset counter">↻</button>
+          <button class="delete-counter" onclick="app.deleteCounter(${counter.id})" title="Delete counter">×</button>
+        </div>
       </div>
       <div class="counter-controls">
         <button class="counter-btn minus" onclick="app.decrementCounter(${counter.id})">−</button>
@@ -114,11 +147,10 @@ class CounterApp {
       };
 
       input.addEventListener("blur", saveTitle);
-      input.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-          saveTitle();
-        }
-      });
+      input.addEventListener(
+        "keypress",
+        (e) => e.key === "Enter" && saveTitle()
+      );
     }
   }
 
@@ -149,31 +181,24 @@ class CounterApp {
       alert("You must have at least one counter!");
       return;
     }
-
-    this.counters = this.counters.filter((c) => c.id !== id);
-    document.querySelector(`[data-id="${id}"]`).remove();
-    this.updateTotal();
-    this.saveCounters();
-  }
-
-  updateCounterDisplay(id, count) {
-    const counterElement = document.querySelector(
-      `[data-id="${id}"] .count-display`
-    );
-    if (counterElement) {
-      counterElement.textContent = count;
+    if (confirm("Are you sure you want to delete this counter?")) {
+      this.counters = this.counters.filter((c) => c.id !== id);
+      document.querySelector(`[data-id="${id}"]`).remove();
+      this.updateTotal();
+      this.saveCounters();
     }
   }
 
+  updateCounterDisplay(id, count) {
+    const element = document.querySelector(`[data-id="${id}"] .count-display`);
+    if (element) element.textContent = count;
+  }
+
   animateCounter(id) {
-    const counterElement = document.querySelector(
-      `[data-id="${id}"] .count-display`
-    );
-    if (counterElement) {
-      counterElement.classList.add("animate");
-      setTimeout(() => {
-        counterElement.classList.remove("animate");
-      }, 200);
+    const element = document.querySelector(`[data-id="${id}"] .count-display`);
+    if (element) {
+      element.classList.add("animate");
+      setTimeout(() => element.classList.remove("animate"), 200);
     }
   }
 
@@ -186,102 +211,89 @@ class CounterApp {
   }
 
   updateBackgroundColor() {
-    const color = document.getElementById("bgColorInput").value;
-    if (this.isValidHexColor(color)) {
-      document.body.style.backgroundColor = color;
-      this.saveSettings();
-    }
-  }
-
-  updateTextColor() {
-    const color = document.getElementById("textColorInput").value;
-    if (this.isValidHexColor(color)) {
-      document.body.style.color = color;
-      this.saveSettings();
-    }
-  }
-
-  updateBackgroundImage() {
-    const imageUrl = document.getElementById("bgImageInput").value;
-    if (imageUrl) {
-      document.body.style.backgroundImage = `url(${imageUrl})`;
-      document.body.style.backgroundSize = "cover";
-      document.body.style.backgroundPosition = "center";
-      document.body.style.backgroundRepeat = "no-repeat";
-    } else {
-      document.body.style.backgroundImage = "";
-    }
+    document.body.style.backgroundColor =
+      document.getElementById("bgColorInput").value;
     this.saveSettings();
   }
 
   updateFontFamily() {
-    const fontFamily = document.getElementById("fontSelect").value;
-    document.body.style.fontFamily = fontFamily;
+    document.body.style.fontFamily =
+      document.getElementById("fontSelect").value;
     this.saveSettings();
   }
 
   toggleSettings() {
-    const panel = document.getElementById("settingsPanel");
-    panel.classList.toggle("open");
+    document.getElementById("settingsPanel").classList.toggle("open");
   }
 
   closeSettings() {
-    const panel = document.getElementById("settingsPanel");
-    panel.classList.remove("open");
+    document.getElementById("settingsPanel").classList.remove("open");
   }
 
   resetStyles() {
-    document.body.style.backgroundColor = "";
-    document.body.style.color = "";
-    document.body.style.backgroundImage = "";
-    document.body.style.fontFamily = "";
+    Object.assign(document.body.style, {
+      backgroundColor: "#f5f5f5",
+      backgroundImage: "",
+      fontFamily: "",
+    });
 
-    document.getElementById("bgColorInput").value = "";
-    document.getElementById("textColorInput").value = "";
-    document.getElementById("bgImageInput").value = "";
+    document.getElementById("bgColorInput").value = "#f5f5f5";
     document.getElementById("fontSelect").value = "'Open Sans', sans-serif";
 
-    localStorage.removeItem("counterAppSettings");
-  }
+    document
+      .querySelectorAll(".image-option")
+      .forEach((opt) => opt.classList.remove("selected"));
+    document
+      .querySelector('.image-option[data-image=""]')
+      .classList.add("selected");
 
-  isValidHexColor(hex) {
-    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex);
+    this.selectedBackground = "";
+    localStorage.removeItem("counterAppSettings");
   }
 
   saveSettings() {
     const settings = {
       backgroundColor: document.body.style.backgroundColor,
-      color: document.body.style.color,
-      backgroundImage: document.body.style.backgroundImage,
+      backgroundImage: this.selectedBackground,
       fontFamily: document.body.style.fontFamily,
     };
     localStorage.setItem("counterAppSettings", JSON.stringify(settings));
   }
 
   loadSettings() {
-    const savedSettings = localStorage.getItem("counterAppSettings");
-    if (savedSettings) {
-      const settings = JSON.parse(savedSettings);
+    const saved = localStorage.getItem("counterAppSettings");
+    if (!saved) {
+      document.querySelector('[data-image=""]')?.classList.add("selected");
+      return;
+    }
 
-      if (settings.backgroundColor) {
-        document.body.style.backgroundColor = settings.backgroundColor;
-        document.getElementById("bgColorInput").value =
-          settings.backgroundColor;
-      }
-      if (settings.color) {
-        document.body.style.color = settings.color;
-        document.getElementById("textColorInput").value = settings.color;
-      }
+    const settings = JSON.parse(saved);
+
+    if (settings.backgroundColor) {
+      document.body.style.backgroundColor = settings.backgroundColor;
+      document.getElementById("bgColorInput").value = settings.backgroundColor;
+    }
+
+    if (settings.backgroundImage !== undefined) {
+      this.selectedBackground = settings.backgroundImage;
       if (settings.backgroundImage) {
-        document.body.style.backgroundImage = settings.backgroundImage;
-        document.body.style.backgroundSize = "cover";
-        document.body.style.backgroundPosition = "center";
-        document.body.style.backgroundRepeat = "no-repeat";
+        Object.assign(document.body.style, {
+          backgroundImage: `url(${settings.backgroundImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        });
+        document
+          .querySelector(`[data-image="${settings.backgroundImage}"]`)
+          ?.classList.add("selected");
+      } else {
+        document.querySelector('[data-image=""]')?.classList.add("selected");
       }
-      if (settings.fontFamily) {
-        document.body.style.fontFamily = settings.fontFamily;
-        document.getElementById("fontSelect").value = settings.fontFamily;
-      }
+    }
+
+    if (settings.fontFamily) {
+      document.body.style.fontFamily = settings.fontFamily;
+      document.getElementById("fontSelect").value = settings.fontFamily;
     }
   }
 
@@ -290,15 +302,11 @@ class CounterApp {
   }
 
   loadCounters() {
-    const savedCounters = localStorage.getItem("counterAppData");
-    if (savedCounters) {
-      this.counters = JSON.parse(savedCounters);
+    const saved = localStorage.getItem("counterAppData");
+    if (saved) {
+      this.counters = JSON.parse(saved);
       this.nextId = Math.max(...this.counters.map((c) => c.id), 0) + 1;
-
-      this.counters.forEach((counter) => {
-        this.renderCounter(counter);
-      });
-
+      this.counters.forEach((counter) => this.renderCounter(counter));
       this.updateTotal();
     }
   }

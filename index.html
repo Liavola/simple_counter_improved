@@ -1,104 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom Counter App</title>
-    <link rel="stylesheet" href="style.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Quicksand:wght@300..700&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
+    <link rel="icon" type="image/x-icon" href="images/Favicon.ai">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Quicksand:wght@300..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Poppins:wght@300;400;600;700&family=Dancing+Script:wght@400;700&family=Righteous&family=Press+Start+2P&family=Fredoka+One&family=Comfortaa:wght@300;400;700&family=Kalam:wght@300;400;700&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
     <div class="app-wrapper">
-      <!-- Main Counter Area -->
-      <main>
-        <div class="sticky-header">
-          <div class="logo-section">
-            <div class="logo">
-              <span>📊 Workflow Counter</span>
+        <main>
+            <div class="sticky-header">
+                <div class="logo-section">
+                    <div class="logo">
+                        <img src="images/logo.ai" alt="CounterApp Logo" class="logo-image">
+                    </div>
+                </div>
+                
+                <div class="center-controls">
+                    <button id="addCounterBtn" class="primary-btn">Add counter</button>
+                    <button id="resetCountersBtn" class="danger-btn">Reset all counters</button>
+                </div>
+                
+                <div class="header-controls">
+                    <div class="total-display">
+                        <span>Total: <span id="totalCount">0</span></span>
+                    </div>
+                    <button id="toggleSettingsBtn" class="settings-btn secondary-btn">⚙️ Settings</button>
+                </div>
             </div>
-          </div>
 
-          <button id="addCounterBtn" class="primary-btn">Add counter</button>
-
-          <div class="header-controls">
-            <div class="total-display">
-              <span>Total: <span id="totalCount">0</span></span>
+            <div id="countersContainer" class="counters-container">
+                <!-- Counters dynamically added here -->
             </div>
-            <button id="toggleSettingsBtn" class="settings-btn secondary-btn">
-              ⚙️ Settings
-            </button>
-          </div>
-        </div>
+        </main>
 
-        <div id="countersContainer" class="counters-container">
-          <!-- Counters will be dynamically added here -->
-        </div>
-      </main>
+        <aside class="settings-panel" id="settingsPanel">
+            <div class="settings-content">
+                <div class="settings-header">
+                    <h2>Customization</h2>
+                    <button id="closeSettingsBtn" class="close-btn">×</button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Background Color:</label>
+                    <input type="color" id="bgColorInput" value="#f5f5f5">
+                </div>
 
-      <!-- Settings Panel (Initially Hidden) -->
-      <aside class="settings-panel" id="settingsPanel">
-        <div class="settings-content">
-          <div class="settings-header">
-            <h2>Customization</h2>
-            <button id="closeSettingsBtn" class="close-btn">×</button>
-          </div>
+                <div class="input-group">
+                    <label>Background Images:</label>
+                    <div class="image-grid">
+                        <div class="image-option" data-image=""><span>None</span></div>
+                        <div class="image-option" data-image="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=800&fit=crop"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=150&h=100&fit=crop" alt="Mountains"></div>
+                        <div class="image-option" data-image="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&h=800&fit=crop"><img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=150&h=100&fit=crop" alt="Forest"></div>
+                        <div class="image-option" data-image="https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1200&h=800&fit=crop"><img src="https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=150&h=100&fit=crop" alt="Space"></div>
+                        <div class="image-option" data-image="https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=1200&h=800&fit=crop"><img src="https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=150&h=100&fit=crop" alt="Lake"></div>
+                        <div class="image-option" data-image="https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1200&h=800&fit=crop"><img src="https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=150&h=100&fit=crop" alt="Ocean"></div>
+                        <div class="image-option" data-image="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1200&h=800&fit=crop"><img src="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=150&h=100&fit=crop" alt="City"></div>
+                    </div>
+                </div>
 
-          <div class="input-group">
-            <label>Background Color:</label>
-            <input
-              type="text"
-              id="bgColorInput"
-              placeholder="#ffffff"
-              maxlength="7"
-            />
-          </div>
+                <div class="input-group">
+                    <label>Font Family:</label>
+                    <select id="fontSelect">
+                        <option value="'Open Sans', sans-serif">Open Sans (Default)</option>
+                        <option value="'Poppins', sans-serif">Poppins</option>
+                        <option value="'Roboto', sans-serif">Roboto</option>
+                        <option value="'Quicksand', sans-serif">Quicksand</option>
+                        <option value="'Comfortaa', cursive">Comfortaa</option>
+                        <option value="'Playfair Display', serif">Playfair Display</option>
+                        <option value="'Dancing Script', cursive">Dancing Script</option>
+                        <option value="'Righteous', cursive">Righteous</option>
+                        <option value="'Fredoka One', cursive">Fredoka One</option>
+                        <option value="'Kalam', cursive">Kalam</option>
+                        <option value="'Comic Neue', cursive">Comic Neue</option>
+                        <option value="'Press Start 2P', cursive">Press Start 2P</option>
+                    </select>
+                </div>
 
-          <div class="input-group">
-            <label>Text Color:</label>
-            <input
-              type="text"
-              id="textColorInput"
-              placeholder="#000000"
-              maxlength="7"
-            />
-          </div>
-
-          <div class="input-group">
-            <label>Background Image URL:</label>
-            <input
-              type="text"
-              id="bgImageInput"
-              placeholder="Enter image URL"
-            />
-          </div>
-
-          <div class="input-group">
-            <label>Font Family:</label>
-            <select id="fontSelect">
-              <option value="'Open Sans', sans-serif">
-                Open Sans (Default)
-              </option>
-              <option value="'Playfair Display', serif">
-                Playfair Display
-              </option>
-              <option value="'Quicksand', sans-serif">Quicksand</option>
-              <option value="'Roboto', sans-serif">Roboto</option>
-            </select>
-          </div>
-
-          <div class="input-group">
-            <button id="resetStylesBtn" class="secondary-btn">
-              Reset Styles
-            </button>
-          </div>
-        </div>
-      </aside>
+                <div class="input-group">
+                    <button id="resetStylesBtn" class="secondary-btn">Reset Styles</button>
+                </div>
+            </div>
+        </aside>
     </div>
     <script src="index.js"></script>
-  </body>
+</body>
 </html>
