@@ -1805,6 +1805,12 @@ export class CounterApp {
     const listEl = document.getElementById("leaderboardList");
     if (!listEl) return;
 
+    if (!this.leaderboardEnabled || !this.displayName) {
+      listEl.innerHTML =
+        '<p class="leaderboard-empty">You need to enter your name and opt in to share your counts before you can view the leaderboard.</p>';
+      return;
+    }
+
     if (!isConfigured()) {
       listEl.innerHTML =
         '<p class="leaderboard-empty">Firebase not configured yet.<br>Fill in the config in <code>js/leaderboard.js</code>.</p>';
