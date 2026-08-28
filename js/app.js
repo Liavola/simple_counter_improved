@@ -1833,6 +1833,12 @@ export class CounterApp {
     ]);
     this._allowlistCache = allowlist;
 
+    if (allowlist && !allowlist[this.displayName]) {
+      listEl.innerHTML =
+        '<p class="leaderboard-empty">Your name is not on the approved list. Ask the admin to add you.</p>';
+      return;
+    }
+
     if (data === null) {
       listEl.innerHTML =
         '<p class="leaderboard-empty">Could not load data. Check your Firebase config.</p>';
@@ -1892,7 +1898,6 @@ export class CounterApp {
       const todayCompletion = this.computeCompletionFromBreakdown(todayTasks);
       const dayCounts = weekDays.map((d) => parseDayVal(days[d]).total);
       const weekScore = dayCounts.reduce((sum, c) => sum + c, 0);
-      const joinDate = Object.keys(days).sort()[0] || null;
       return {
         name,
         todayTotal,
@@ -1900,7 +1905,6 @@ export class CounterApp {
         todayCompletion,
         dayCounts,
         weekScore,
-        joinDate,
       };
     });
 
@@ -1954,9 +1958,6 @@ export class CounterApp {
           barHtml = `<div class="lb-bar-wrap"><div class="lb-bar" style="width:${pct}%"></div></div>`;
         }
 
-        const joinLabel = entry.joinDate
-          ? `<span class="lb-join-date">since ${this._formatJoinDate(entry.joinDate)}</span>`
-          : "";
         html += `
           <div class="leaderboard-row${isMe ? " leaderboard-me" : ""}">
             <div class="lb-rank">${medal || i + 1}</div>
@@ -1964,7 +1965,6 @@ export class CounterApp {
               <div class="lb-name">
                 ${entry.name}${isMe ? " (you)" : ""}
                 ${taskProgress ? `<span class="lb-completion-pct">${completionPct}%</span>` : ""}
-                ${joinLabel}
               </div>
               ${chipsHtml}
               ${barHtml}
@@ -1989,15 +1989,12 @@ export class CounterApp {
           })
           .join("");
 
-        const joinLabelWeek = entry.joinDate
-          ? `<span class="lb-join-date">since ${this._formatJoinDate(entry.joinDate)}</span>`
-          : "";
         html += `
           <div class="leaderboard-row leaderboard-row-week${isMe ? " leaderboard-me" : ""}">
             <div class="lb-rank">${medal || i + 1}</div>
             <div class="lb-info">
               <div class="lb-name-row">
-                <span class="lb-name">${entry.name}${isMe ? " (you)" : ""} ${joinLabelWeek}</span>
+                <span class="lb-name">${entry.name}${isMe ? " (you)" : ""}</span>
                 <span class="lb-score-inline">${entry.weekScore}</span>
               </div>
               <div class="lb-week-grid">${dayGrid}</div>
@@ -2007,27 +2004,6 @@ export class CounterApp {
     });
 
     listEl.innerHTML = html;
-  }
-
-  _formatJoinDate(dateStr) {
-    const d = new Date(dateStr + "T12:00:00");
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const year =
-      d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : "";
-    return `${d.getDate()} ${months[d.getMonth()]}${year}`;
   }
 
   _getThisWeekDays() {

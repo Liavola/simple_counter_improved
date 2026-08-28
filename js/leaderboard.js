@@ -129,7 +129,7 @@ export async function fetchAllowlist() {
   if (!isConfigured()) return null;
   try {
     const db = getDb();
-    const snapshot = await get(ref(db, "allowlist"));
+    const snapshot = await get(ref(db, "allowList"));
     return snapshot.exists() ? snapshot.val() : null;
   } catch (err) {
     console.warn("[Leaderboard] allowlist fetch failed:", err.message);
