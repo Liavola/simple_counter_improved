@@ -5,7 +5,16 @@
 //   2. Build → Realtime Database → Create database → Start in test mode
 //   3. Project Settings → Your apps → Add web app → copy the config below
 //   4. In the Realtime Database "Rules" tab, paste:
-//      { "rules": { "leaderboard": { ".read": true, "$user": { ".write": true } } } }
+//      {
+//        "rules": {
+//          "allowList": { ".read": true, ".write": false },
+//          "leaderboard": {
+//            ".read": true,
+//            "$user": { ".write": "root.child('allowList').child($user).exists()" }
+//          }
+//        }
+//      }
+//   5. Add allowed names under allowList/ in the Database (key = display name, value = true).
 //
 // Then fill in your config values below and share the file with your team.
 
@@ -28,6 +37,8 @@ const FIREBASE_CONFIG = {
 };
 
 let _db = null;
+// undefined = not yet fetched, null = no allowList (allow all), Set = allowed keys
+let _allowListCache;
 
 function isConfigured() {
   return FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
@@ -50,8 +61,23 @@ function sanitizeKey(name) {
     .slice(0, 40);
 }
 
+// Fetch allowList once and cache it. Returns a Set of allowed keys, or null if no list exists.
+async function getOrFetchAllowList() {
+  if (_allowListCache !== undefined) return _allowListCache;
+  try {
+    const db = getDb();
+    const snapshot = await get(ref(db, "allowList"));
+    // Works whether allowList entries are { name: true } or { name: { since: "..." } }
+    _allowListCache = snapshot.exists() ? new Set(Object.keys(snapshot.val())) : null;
+  } catch {
+    _allowListCache = null; // on error, don't block anyone
+  }
+  return _allowListCache;
+}
+
 /**
  * Push today's score for a user.
+ * Silently skips if the user's name is not in the allowList.
  * @param {string} name - Display name
  * @param {string} dateKey - YYYY-MM-DD
  * @param {number|object} payload - Either a plain total number (legacy) or an
@@ -62,6 +88,8 @@ export async function pushScore(name, dateKey, payload) {
   try {
     const db = getDb();
     const key = sanitizeKey(name);
+    const allowList = await getOrFetchAllowList();
+    if (allowList && !allowList.has(key)) return; // not on the list — silently ignore
     await set(ref(db, `leaderboard/${key}/${dateKey}`), payload);
   } catch (err) {
     console.warn("[Leaderboard] sync failed:", err.message);
@@ -69,7 +97,7 @@ export async function pushScore(name, dateKey, payload) {
 }
 
 /**
- * Fetch the full leaderboard data.
+ * Fetch the full leaderboard data, filtered to allowList if one exists.
  * Returns an object like: { "Alice": { "2026-03-17": 42, ... }, ... }
  * Returns null if Firebase is not configured or fetch fails.
  */
@@ -77,8 +105,16 @@ export async function fetchLeaderboard() {
   if (!isConfigured()) return null;
   try {
     const db = getDb();
-    const snapshot = await get(ref(db, "leaderboard"));
-    return snapshot.exists() ? snapshot.val() : {};
+    const [leaderSnapshot, allowList] = await Promise.all([
+      get(ref(db, "leaderboard")),
+      getOrFetchAllowList(),
+    ]);
+    if (!leaderSnapshot.exists()) return {};
+    const data = leaderSnapshot.val();
+    if (!allowList) return data; // no allowList = show everyone
+    return Object.fromEntries(
+      Object.entries(data).filter(([key]) => allowList.has(key))
+    );
   } catch (err) {
     console.warn("[Leaderboard] fetch failed:", err.message);
     return null;

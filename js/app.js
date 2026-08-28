@@ -1858,8 +1858,10 @@ export class CounterApp {
       return { total: 0, tasks: {} };
     };
 
-    // Build entries
-    const entries = Object.entries(data).map(([name, days]) => {
+    // Build entries — filter out any non-user keys (e.g. metadata fields like "since")
+    const entries = Object.entries(data)
+      .filter(([, days]) => days && typeof days === "object")
+      .map(([name, days]) => {
       const todayParsed = parseDayVal(days[today]);
       const todayTotal = todayParsed.total;
       const todayTasks = todayParsed.tasks;
