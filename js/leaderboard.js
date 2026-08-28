@@ -85,4 +85,20 @@ export async function fetchLeaderboard() {
   }
 }
 
+/**
+ * Fetch the allowlist of approved display name keys.
+ * Returns an object like { "Alice": true, "Bob": true } or null if not set up.
+ */
+export async function fetchAllowlist() {
+  if (!isConfigured()) return null;
+  try {
+    const db = getDb();
+    const snapshot = await get(ref(db, "allowlist"));
+    return snapshot.exists() ? snapshot.val() : null;
+  } catch (err) {
+    console.warn("[Leaderboard] allowlist fetch failed:", err.message);
+    return null;
+  }
+}
+
 export { isConfigured };
