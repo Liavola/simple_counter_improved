@@ -1,5 +1,10 @@
 import { AudioFeedback } from "./audio.js";
-import { pushScore, fetchLeaderboard, isConfigured } from "./leaderboard.js";
+import {
+  pushScore,
+  fetchLeaderboard,
+  fetchAllowlist,
+  isConfigured,
+} from "./leaderboard.js";
 
 // ─── Task Definitions ─────────────────────────────────────────────────────────
 // Each recognized task type with its name patterns and daily targets.
@@ -8,17 +13,17 @@ const TASK_DEFINITIONS = {
   CID: {
     patterns: ["cid"],
     fullDayTarget: 36,
-    color: "#182c9b",
+    color: "#B54a93",
   },
   SINGLES: {
     patterns: ["singles", "enkelvoudig", "enkel", "enkelvoudige", "single"],
     fullDayTarget: 100,
-    color: "#85c5f0",
+    color: "#A4c544",
   },
   ICM: {
     patterns: ["icm"],
-    halfDayTarget: 100, // occupies the morning (half a day)
-    color: "#eed04a",
+    halfDayTarget: 100,
+    color: "#4fbde3",
   },
 };
 
@@ -50,6 +55,7 @@ export class CounterApp {
     this.leaderboardEnabled = false;
     this.leaderboardView = "today";
     this.leaderboardSyncTimeout = null;
+    this._allowlistCache = null;
 
     this.celebrationGifs = [
       "https://media.giphy.com/media/3oz8xAFtqoOUUrsh7W/giphy.gif",
@@ -689,7 +695,7 @@ export class CounterApp {
     if (types.length === 0) return null;
 
     const HOURS = 6; // active working hours in a full day
-    const ICM_CAP_HOURS = 3; // ICM is a half-day task → caps at 3 bar-hours (50 %)
+    const ICM_CAP_HOURS = 3; // ICM half-day baseline: 100 items = 3 bar-hours (50%); scales linearly beyond
 
     const tasks = [];
     let totalBarHours = 0;
@@ -702,8 +708,9 @@ export class CounterApp {
       let barHours, target;
       if (type === "ICM") {
         target = def.halfDayTarget; // 100
-        // ICM contributes proportionally up to 100 items, then hard-capped at 50 %
-        barHours = Math.min((count / target) * ICM_CAP_HOURS, ICM_CAP_HOURS);
+        // ICM scales linearly: 100 items = 50% (3 bar-hours), 200 items = 100% (6 bar-hours)
+        // No cap — going beyond 100 continues to fill the bar
+        barHours = (count / target) * ICM_CAP_HOURS;
       } else {
         target = def.fullDayTarget;
         // Each item = HOURS / target bar-hours (e.g. 1 CID = 6/36 = 0.167 h)
@@ -716,15 +723,10 @@ export class CounterApp {
 
     if (tasks.length === 0) return null;
 
-    // Cap the total at HOURS; scale all segments proportionally if exceeded
-    const cappedTotal = Math.min(totalBarHours, HOURS);
-    const scale = totalBarHours > 0 ? cappedTotal / totalBarHours : 0;
-
     return tasks.map((t) => ({
       ...t,
-      barHours: t.barHours * scale,
-      // barPct: 0–1 fraction of the full bar this task occupies (after capping)
-      barPct: (t.barHours * scale) / HOURS,
+      barHours: t.barHours,
+      barPct: t.barHours / HOURS,
     }));
   }
 
@@ -761,34 +763,36 @@ export class CounterApp {
 
     container.style.display = "";
 
-    // Overall completion %
-    const totalPct = Math.round(tasks.reduce((s, t) => s + t.barPct, 0) * 100);
-    if (pctEl) pctEl.textContent = totalPct + "%";
+    const totalRawPct = tasks.reduce((s, t) => s + t.barPct, 0); // may exceed 1.0
+    const totalDisplayPct = Math.round(totalRawPct * 100); // e.g. 127
+    if (pctEl) pctEl.textContent = totalDisplayPct + "%";
 
-    // Single stacked bar — update segments in-place so CSS width transition fires
-    // (replacing innerHTML kills the transition since new elements have no prior width)
+    // For the visual bar segments, scale widths so they always fit within 100%
+    // of the bar element — but the label and legend show the real (>100%) value.
+    const visualScale = totalRawPct > 1 ? 1 / totalRawPct : 1;
+
     const existing = Array.from(barEl.querySelectorAll(".dp-seg"));
     tasks.forEach((t, i) => {
-      const w = (t.barPct * 100).toFixed(2);
+      // Visual width is capped proportionally so bar doesn't overflow its container
+      const visualW = (t.barPct * visualScale * 100).toFixed(2);
       let seg = existing[i];
       if (!seg) {
         seg = document.createElement("div");
         seg.className = "dp-seg";
-        // Start at 0 so the width transition animates from nothing on first appear
         seg.style.width = "0%";
         seg.style.background = t.color;
         barEl.appendChild(seg);
-        // Force a reflow so the browser registers the 0% before we set the real width
-        seg.getBoundingClientRect();
+        seg.getBoundingClientRect(); // force reflow for CSS transition
       }
-      seg.style.width = w + "%";
+      seg.style.width = visualW + "%";
       seg.style.background = t.color;
       seg.title = `${t.type}: ${t.count}`;
     });
-    // Remove any leftover segments if task count shrank
+
+    // Remove stale segments
     for (let i = tasks.length; i < existing.length; i++) existing[i].remove();
 
-    // Milestone label overlay inside the bar
+    // Milestone label — extend beyond 100%
     let labelEl = barEl.querySelector(".dp-bar-label");
     if (!labelEl) {
       labelEl = document.createElement("div");
@@ -796,20 +800,25 @@ export class CounterApp {
       barEl.appendChild(labelEl);
     }
     let milestoneText = "";
-    if (totalPct >= 100) milestoneText = "Daily target reached!";
-    else if (totalPct >= 45 && totalPct <= 55) milestoneText = "Halfway there!";
+    if (totalDisplayPct >= 200)
+      milestoneText = "200%! Absolutely unstoppable! 🚀";
+    else if (totalDisplayPct >= 150)
+      milestoneText = "150%! Going above and beyond! ⚡";
+    else if (totalDisplayPct >= 100) milestoneText = "Daily target reached! 🎉";
+    else if (totalDisplayPct >= 45 && totalDisplayPct <= 55)
+      milestoneText = "Halfway there!";
     labelEl.textContent = milestoneText;
     labelEl.classList.toggle("visible", milestoneText !== "");
 
-    // Fire celebration when bar crosses 100% (only for task-based counters)
+    // Celebration fires once when crossing 100%
     const today = this.getCurrentDayKey();
-    if (totalPct >= 100 && this.lastCelebrationDate !== today) {
+    if (totalDisplayPct >= 100 && this.lastCelebrationDate !== today) {
       this.showCelebration();
       this.lastCelebrationDate = today;
       this.saveProgress();
     }
 
-    // Legend: pill chips per task
+    // Legend chips show real counts
     if (legendEl) {
       legendEl.innerHTML = tasks
         .map(
@@ -819,7 +828,6 @@ export class CounterApp {
         .join("");
     }
 
-    // Push page content down so nothing hides behind the fixed bar
     document.body.style.paddingTop = container.offsetHeight + "px";
   }
 
@@ -1805,6 +1813,12 @@ export class CounterApp {
     const listEl = document.getElementById("leaderboardList");
     if (!listEl) return;
 
+    if (!this.leaderboardEnabled || !this.displayName) {
+      listEl.innerHTML =
+        '<p class="leaderboard-empty">You need to enter your name and opt in to share your counts before you can view the leaderboard.</p>';
+      return;
+    }
+
     if (!isConfigured()) {
       listEl.innerHTML =
         '<p class="leaderboard-empty">Firebase not configured yet.<br>Fill in the config in <code>js/leaderboard.js</code>.</p>';
@@ -1813,7 +1827,11 @@ export class CounterApp {
 
     listEl.innerHTML = '<p class="leaderboard-empty">Loading…</p>';
 
-    const data = await fetchLeaderboard();
+    const [data, allowlist] = await Promise.all([
+      fetchLeaderboard(),
+      fetchAllowlist(),
+    ]);
+    this._allowlistCache = allowlist;
 
     if (data === null) {
       listEl.innerHTML =
@@ -1858,16 +1876,23 @@ export class CounterApp {
       return { total: 0, tasks: {} };
     };
 
-    // Build entries — filter out any non-user keys (e.g. metadata fields like "since")
-    const entries = Object.entries(data)
-      .filter(([, days]) => days && typeof days === "object")
-      .map(([name, days]) => {
+    // Apply allowlist filter if one is configured
+    const allowlist = this._allowlistCache;
+    const visibleData = allowlist
+      ? Object.fromEntries(
+          Object.entries(data).filter(([name]) => allowlist[name]),
+        )
+      : data;
+
+    // Build entries
+    const entries = Object.entries(visibleData).map(([name, days]) => {
       const todayParsed = parseDayVal(days[today]);
       const todayTotal = todayParsed.total;
       const todayTasks = todayParsed.tasks;
       const todayCompletion = this.computeCompletionFromBreakdown(todayTasks);
       const dayCounts = weekDays.map((d) => parseDayVal(days[d]).total);
       const weekScore = dayCounts.reduce((sum, c) => sum + c, 0);
+      const joinDate = Object.keys(days).sort()[0] || null;
       return {
         name,
         todayTotal,
@@ -1875,6 +1900,7 @@ export class CounterApp {
         todayCompletion,
         dayCounts,
         weekScore,
+        joinDate,
       };
     });
 
@@ -1928,6 +1954,9 @@ export class CounterApp {
           barHtml = `<div class="lb-bar-wrap"><div class="lb-bar" style="width:${pct}%"></div></div>`;
         }
 
+        const joinLabel = entry.joinDate
+          ? `<span class="lb-join-date">since ${this._formatJoinDate(entry.joinDate)}</span>`
+          : "";
         html += `
           <div class="leaderboard-row${isMe ? " leaderboard-me" : ""}">
             <div class="lb-rank">${medal || i + 1}</div>
@@ -1935,6 +1964,7 @@ export class CounterApp {
               <div class="lb-name">
                 ${entry.name}${isMe ? " (you)" : ""}
                 ${taskProgress ? `<span class="lb-completion-pct">${completionPct}%</span>` : ""}
+                ${joinLabel}
               </div>
               ${chipsHtml}
               ${barHtml}
@@ -1959,12 +1989,15 @@ export class CounterApp {
           })
           .join("");
 
+        const joinLabelWeek = entry.joinDate
+          ? `<span class="lb-join-date">since ${this._formatJoinDate(entry.joinDate)}</span>`
+          : "";
         html += `
           <div class="leaderboard-row leaderboard-row-week${isMe ? " leaderboard-me" : ""}">
             <div class="lb-rank">${medal || i + 1}</div>
             <div class="lb-info">
               <div class="lb-name-row">
-                <span class="lb-name">${entry.name}${isMe ? " (you)" : ""}</span>
+                <span class="lb-name">${entry.name}${isMe ? " (you)" : ""} ${joinLabelWeek}</span>
                 <span class="lb-score-inline">${entry.weekScore}</span>
               </div>
               <div class="lb-week-grid">${dayGrid}</div>
@@ -1974,6 +2007,27 @@ export class CounterApp {
     });
 
     listEl.innerHTML = html;
+  }
+
+  _formatJoinDate(dateStr) {
+    const d = new Date(dateStr + "T12:00:00");
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const year =
+      d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : "";
+    return `${d.getDate()} ${months[d.getMonth()]}${year}`;
   }
 
   _getThisWeekDays() {
